@@ -1,5 +1,9 @@
 __pycache__/
 .ipynb_checkpoints/
+.vscode/
 
 # Data downloaded from Elexon
 data/*.json
+
+site/
+.venv/

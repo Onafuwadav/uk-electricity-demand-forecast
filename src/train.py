@@ -1,18 +1,18 @@
 from pathlib import Path
 
-import numpy as np
 import matplotlib
+import numpy as np
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
+from sklearn.ensemble import ExtraTreesRegressor, RandomForestRegressor
 from sklearn.linear_model import Ridge
-from sklearn.model_selection import train_test_split, TimeSeriesSplit, cross_val_score
 from sklearn.metrics import mean_squared_error
-from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
+from sklearn.model_selection import TimeSeriesSplit, cross_val_score, train_test_split
 
 from data import prepare_dataset
+from features import add_calendar_features, fetch_bank_holidays
 from fetch_elexon import fetch_atl
-from features import fetch_bank_holidays, add_calendar_features
 
 RANDOM_SEED = 42
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "outputs"

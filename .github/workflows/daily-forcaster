@@ -1,0 +1,73 @@
+# Every night at 3am UK time: score yesterday's forecast and forecast today, commit and publish to results page with GitHub Pages.
+# Retrain on the 1st of every month if enough data for retrain
+
+name: Daily forecast
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Run now"
+        type: boolean
+        default: true
+      retrain:
+        description: "Retrain now"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: daily-forecast
+  cancel-in-progress: false
+
+jobs:
+  forecast:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Score, retrain and forecast
+        id: daily
+        run: |
+          python src/live.py daily \
+            ${{ inputs.force && '--force' || '' }} \
+            ${{ inputs.retrain && '--retrain' || '' }}
+
+      - name: Commit results
+        if: steps.daily.outputs.ran == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add live/
+          git diff --cached --quiet || git commit -m "Daily forecast $(TZ=Europe/London date +%Y-%m-%d)"
+          git push
+
+      - name: Build results page
+        if: steps.daily.outputs.ran == 'true'
+        run: python src/live.py site
+
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.daily.outputs.ran == 'true'
+        with:
+          path: site
+
+      - uses: actions/deploy-pages@v4
+        id: deploy
+        if: steps.daily.outputs.ran == 'true'
