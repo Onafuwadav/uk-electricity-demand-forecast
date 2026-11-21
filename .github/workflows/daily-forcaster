@@ -1,5 +1,5 @@
-# Every night at 3am UK time: score yesterday's forecast and forecast today, commit and publish to results page with GitHub Pages.
-# Retrain on the 1st of every month if enough data for retrain
+# Every night at 3am UK time: score yesterday's forecast and forecast today, commit and publish to results page with GitHub Pages
+# Retrain on the 1st of every month
 
 name: Daily forecast
 
