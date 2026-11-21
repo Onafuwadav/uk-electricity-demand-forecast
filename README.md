@@ -2,7 +2,7 @@
 
 Predicts tomorrow's national electricity demand, from today's values plus calendar information. The data comes from **Elexon BMRS**.
 
-## Pipeline
+## Pipelines
 1. **Data** ([src/fetch_elexon.py](src/fetch_elexon.py)): downloads the ATL dataset from elexon. The API allows at most 7 days per request, so longer ranges are fetched week by week and cached in `data/`
 2. **Cleaning** ([src/data.py](src/data.py)):
    - Remove duplicate settlement periods
