@@ -29,13 +29,12 @@ permissions:
 concurrency:
   group: daily-forecast
   cancel-in-progress: false
-
+  
 jobs:
   forecast:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+    outputs:
+      ran: ${{ steps.daily.outputs.ran }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -73,6 +72,13 @@ jobs:
         with:
           path: site
 
+  deploy:
+    needs: forecast
+    if: needs.forecast.outputs.ran == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
       - uses: actions/deploy-pages@v4
         id: deploy
-        if: steps.daily.outputs.ran == 'true'
