@@ -169,8 +169,9 @@ def score(history, forecasts):
 def daily(force=False, force_retrain=False):
     now = datetime.now(UK)
     today = now.date()
-    if not force and not RUN_HOUR <= now.hour < RUN_HOUR + 6:
-        print(f"Not between {RUN_HOUR}am and {RUN_HOUR + 6}am in the UK (it is {now:%H:%M}), nothing to do")
+    
+    if not force and now.hour < RUN_HOUR:
+        print(f"Before {RUN_HOUR}am in the UK (it is {now:%H:%M})")
         return False
     forecasts = _read_csv("forecasts.csv")
     if pd.Timestamp(today) in forecasts.index and not force:
