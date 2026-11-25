@@ -212,32 +212,45 @@ def daily(force=False, force_retrain=False):
 def build_site():
     import matplotlib
     matplotlib.use("Agg")
+    import matplotlib.dates as mdates
     import matplotlib.pyplot as plt
-
+ 
     SITE.mkdir(exist_ok=True)
     scores, forecasts, history, models = _read_csv("scores.csv"), _read_csv("forecasts.csv"), _read_csv("history.csv"), _read_models()
     hours = np.arange(1, 49) / 2
 
     fig, ax = plt.subplots(figsize=(10, 4))
     if len(scores):
-        ax.plot(scores.index, scores["rmse_baseline"], "o-", color="#999", ms=3, lw=1, label="Baseline (same as yesterday)")
+        ax.plot(scores.index, scores["rmse_baseline"], "o-", color="#999", ms=3, lw=1, label="Baseline")
         ax.plot(scores.index, scores["rmse_model"], "o-", color="#8523DB", ms=3, lw=1.5, label="Model")
+        
+        first, last = scores.index.min(), scores.index.max()
+        
+        ax.set_xlim(first - pd.Timedelta(days=1), max(last, first + pd.Timedelta(days=6)) + pd.Timedelta(days=1))
+        ax.set_ylim(0, scores[["rmse_model", "rmse_baseline"]].to_numpy().max() * 1.3)
+        
+        locator = mdates.AutoDateLocator(minticks=3, maxticks=10)
+        ax.xaxis.set_major_locator(locator)
+        ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+
         for m in models:
-            if m["accepted"] and pd.Timestamp(m["created"]) >= scores.index.min():
+            if m["accepted"] and ax.get_xlim()[0] <= mdates.date2num(pd.Timestamp(m["created"])) <= ax.get_xlim()[1]:
                 ax.axvline(pd.Timestamp(m["created"]), color="#8523DB", ls="--", lw=1, alpha=0.6)
                 ax.text(pd.Timestamp(m["created"]), ax.get_ylim()[1], f" v{m['version']}", va="top", fontsize=9, color="#8523DB")
+                
     ax.set_ylabel("Daily error, RMSE (MW)")
     ax.set_title("How far off each day's forecast was")
+                
     if len(scores):
-        ax.legend(loc="upper left")
+        ax.legend(loc="upper right", ncol=2)
     ax.grid(alpha=0.3)
     fig.autofmt_xdate()
     fig.tight_layout()
     fig.savefig(SITE / "daily_error.png", dpi=120)
     plt.close(fig)
-
-
+    
     fig, axes = plt.subplots(1, 2, figsize=(12, 4), sharey=True)
+    
     if len(scores):
         day = scores.index.max()
         f = forecasts.loc[day]
@@ -266,8 +279,8 @@ def build_site():
     rows = ""
     if len(scores):
         better = 100 * (1 - scores["rmse_model"].mean() / scores["rmse_baseline"].mean())
-        summary = (f"Over {len(scores)} day(s) the model's average error is <b>{scores['rmse_model'].mean():,.0f} MW</b>, "
-                   f"against {scores['rmse_baseline'].mean():,.0f} MW for the baseline, {better:.0f}% lower.")
+        summary = (f"The baseline's average error is {scores['rmse_baseline'].mean():,.0f} MW, "
+                   f"vs my model's average error of <b>{scores['rmse_model'].mean():,.0f} MW</b> which is {better:.0f}% lower than the baseline.")
         for day, s in scores.sort_index(ascending=False).head(14).iterrows():
             rows += (f"<tr><td>{day:%a %d %b}</td><td>v{int(s['model_version'])}</td><td>{s['rmse_model']:,.0f}</td>"
                      f"<td>{s['rmse_baseline']:,.0f}</td><td>{s['peak_predicted']:,.0f} / {s['peak_actual']:,.0f}</td></tr>")
@@ -288,21 +301,13 @@ th, td {{ text-align: left; padding: 4px 8px; border-bottom: 1px solid #ddd; }} 
 .scroll {{ overflow-x: auto; }}
 </style></head><body>
 <h1>UK day-ahead electricity demand forecast</h1>
-<p>Every night at 3am a GitHub Actions job forecasts the day's national demand, half-hour by half-hour, from yesterday's
-demand, the calendar, school holidays and the weather forecast. The next night it scores that forecast against what
-actually happened. The baseline simply assumes today will look like yesterday.</p>
+<p>Every morning at 3am a GitHub Actions job forecasts the day's national demand. The next morning it scores that forecast against what actually happened. The baseline simply assumes today will look like yesterday.</p>
 <p>{summary}</p>
-<p class="dim">Live model: v{live['version'] if live else '-'}, trained on {live['train_start'] if live else '-'} to {live['train_end'] if live else '-'}.
-Updated {updated} UK time. Data: Elexon BMRS (national demand outturn), Open-Meteo (weather).</p>
 <img src="daily_error.png" alt="Daily forecast error of the model and the baseline">
 <img src="latest.png" alt="Latest scored day and today's forecast">
 <h2>Last 14 days (MW)</h2>
 <div class="scroll"><table><tr><th>Day</th><th>Model</th><th>Model error</th><th>Baseline error</th><th>Peak forecast / actual</th></tr>{rows}</table></div>
-<h2>Model versions</h2>
-<p class="dim">On the 1st of each month a new model is trained on the latest year. It only replaces the live model if it
-was more accurate over the last few weeks, which neither model trained on.</p>
-<div class="scroll"><table><tr><th>Date</th><th>Result</th><th>Trained on</th><th>Check (new vs live RMSE)</th></tr>{log}</table></div>
-<p class="dim"><a href="https://github.com/Onafuwadav/uk-electricity-demand-forecast">Source on GitHub</a></p>
+<p class="dim"><a href="https://github.com/Onafuwadav/uk-electricity-demand-forecast">Source Code on GitHub</a></p>
 </body></html>
 """)
     print(f"Site written to {SITE}")
