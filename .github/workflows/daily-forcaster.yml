@@ -7,6 +7,9 @@ on:
   schedule:
     - cron: "0 2 * * *"
     - cron: "0 3 * * *"
+    - cron: "37 4 * * *"
+    - cron: "37 7 * * *"
+    - cron: "37 12 * * *"
   workflow_dispatch:
     inputs:
       force:
@@ -35,6 +38,8 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - uses: actions/setup-python@v5
         with:
